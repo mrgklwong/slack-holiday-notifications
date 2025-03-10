@@ -1,0 +1,15 @@
+{
+  "name": "Slack-Holiday-Notification",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --loader ts-node/esm src/main.ts"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "axios": "^1.5.0",
+    "date-fns": "^2.30.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.2.2"
+  }
+}

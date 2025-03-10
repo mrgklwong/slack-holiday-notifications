@@ -1,0 +1,37 @@
+# .github/workflows/daily-leave-report.yml
+name: Daily Leave Report
+
+on:
+  schedule:
+    - cron: '0 9 * * 1-5' # Mon-Fri at 9 AM UTC
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Download Excel File from OneDrive
+        run: |
+          mkdir ./data
+          curl -L -o ./data/leaves.xlsx "$ONE_DRIVE_DOWNLOAD_URL"
+          ls ./data
+        env:
+          ONE_DRIVE_DOWNLOAD_URL: ${{ secrets.ONE_DRIVE_DOWNLOAD_URL }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: |
+          npm install exceljs axios date-fns
+
+      - name: Run report
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: |
+          npm start --excelPath ./data/leaves.xlsx
+
