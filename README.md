@@ -1,4 +1,4 @@
-# slack-holiday-notification
+# slack-holiday-notifications
 
 # 🌴 **Daily Leave Report Bot** 🌴
 **Automate leave tracking and send cheerful Slack notifications**
