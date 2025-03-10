@@ -1,4 +1,4 @@
-# slack-holiday-notifications
+# slack-holiday-notification-using-excel
 
 # 🌴 **Daily Leave Report Bot** 🌴
 **Automate leave tracking and send cheerful Slack notifications**
@@ -26,7 +26,7 @@ Make sure you have:
 ### 2. Installation
 ```bash
 # 1. Clone or download repository
-git clone https://your-repo-url.com
+git clone this repo
 
 # 2. Install dependencies
 npm install exceljs axios date-fns
@@ -35,8 +35,8 @@ npm install exceljs axios date-fns
 cp .env.example .env
 
 ### 3. How to set up and update?
-1. Export the report from vogsy
-2. Name it leaves.xlsx drop it into your one drive 
+1. Download the excel
+2. Name it leaves.xlsx drop it into your one drive (check the format)
 3. Get the Shared link to the excel (save for later)
 4. Get your slack api webhook (save for later)
 5. Create github actions secerts (ONE_DRIVE_DOWNLOAD_URL and SLACK_WEBHOOK_URL)
