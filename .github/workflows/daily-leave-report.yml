@@ -14,9 +14,8 @@ jobs:
 
       - name: Download Excel File from OneDrive
         run: |
-          mkdir ./data
           curl -L -o ./data/leaves.xlsx "$ONE_DRIVE_DOWNLOAD_URL"
-          ls ./data
+          ls
         env:
           ONE_DRIVE_DOWNLOAD_URL: ${{ secrets.ONE_DRIVE_DOWNLOAD_URL }}
 
@@ -33,5 +32,5 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          npm start --excelPath ./data/leaves.xlsx
+          npm start --excelPath leaves.xlsx
 
