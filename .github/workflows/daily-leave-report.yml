@@ -12,12 +12,23 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Download Excel File from OneDrive
-        run: |
-          curl -L -o ./data/leaves.xlsx "$ONE_DRIVE_DOWNLOAD_URL"
-          ls
+      - name: Download Excel via Microsoft Graph API
         env:
-          ONE_DRIVE_DOWNLOAD_URL: ${{ secrets.ONE_DRIVE_DOWNLOAD_URL }}
+          TENANT_ID: ${{ secrets.TENANT_ID }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: $${{ secrets.CLIENT_SECRET }}
+          ITEM_ID: ${{ secrets.ITEM_ID }}
+        run: |
+          token=$(curl -s -X POST \
+            "https://login.microsoftonline.com/${TENANT_ID}/oauth2/v2.0/token" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "grant_type=client_credentials&client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&scope=https%3A%2F%2Fgraph.microsoft.com%2F.default" \
+            | jq -r '.access_token')
+          
+          curl -L -o ./data/leaves.xlsx \
+            -H "Authorization: Bearer $token" \
+            "https://graph.microsoft.com/v1.0/me/drive/items/${ITEM_ID}/content"
+
 
       - name: Setup Node
         uses: actions/setup-node@v3
