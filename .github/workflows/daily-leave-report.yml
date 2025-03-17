@@ -28,7 +28,8 @@ jobs:
         env:      # Pass GitHub secret to env
           TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}  # Pass GitHub secret to env
           TEST_TOKEN: ${{ secrets.TEST_TOKEN }}
-
+      - name: Rename to leave.xlsx
+        run: mv "data/Report Leave requests.xlsx" "leaves.xlsx"
       - name: Run report
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
