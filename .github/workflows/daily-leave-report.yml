@@ -14,24 +14,20 @@ jobs:
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
-      - name: Download Excel via Microsoft Graph API
-        env:
-          TENANT_ID: ${{ secrets.TENANT_ID }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-          ITEM_ID: ${{ secrets.ITEM_ID }}
-        run: |
-          # Download the file with verbose output
-          curl -L -o "leaves.xlsx" ${{secrets.DOC_LOCATION}}
 
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
-
       - name: Install dependencies
-        run: |
-          npm install exceljs axios date-fns
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:      # Pass GitHub secret to env
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}  # Pass GitHub secret to env
+          API_TOKEN: ${{ secrets.TEST_TOKEN }}
 
       - name: Run report
         env:
