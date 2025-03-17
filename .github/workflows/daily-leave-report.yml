@@ -33,4 +33,4 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
-          npm start --excelPath leaves.xlsx
+          npm start --excelPath 'data/Report Leave requests.xlsx'
