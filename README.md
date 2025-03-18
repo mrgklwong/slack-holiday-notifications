@@ -1,15 +1,18 @@
 # slack-holiday-notification-using-excel
 
+[![Daily Leave Report](https://github.com/mrgklwong/slack-holiday-notifications/actions/workflows/daily-leave-report.yml/badge.svg)](https://github.com/mrgklwong/slack-holiday-notifications/actions/workflows/daily-leave-report.yml)
+
+
 # 🌴 **Daily Leave Report Bot** 🌴
 **Automate leave tracking and send cheerful Slack notifications**
 
 ---
 
 ### ✨ **Features**
-- 🛠️ Reads employee leave entries from an Excel file
-- 🎉 Sends super friendly Slack messages with tropical emojis 🌺
+- 🛠️ Reads employee leave entries from an Excel file downloaded from MS Onedrive
 - 📅 Checks for current/pending leaves using smart date comparisons
 - 🎯 Compiles reports for today's active leaves
+- 🎉 Sends super friendly Slack messages with tropical emojis 🌺
 - 🚀 Works with common leave types (Annual, Sick Leave)
 
 ---
@@ -19,9 +22,8 @@
 ### 1. Prerequisites
 Make sure you have:
 - [Node.js](https://nodejs.org) installed
-- [ExcelJS](https://www.npmjs.com/package/exceljs) (installed via npm)
 - A Slack Webhook URL (see [Slack API Setup](https://api.slack.com/messaging/webhooks))
-- Onedrive excel URL
+- Password, Secret and File Location
 
 ### 2. Installation
 ```bash
@@ -29,16 +31,18 @@ Make sure you have:
 git clone this repo
 
 # 2. Install dependencies
-npm install exceljs axios date-fns
+npm ci
+```
+### 3. Github Actions Secrets
+Please set up the followings secrets in your github actions
+```
 
-# 3. Setup environment variables:
-cp .env.example .env
+```
 
-### 3. How to set up and update?
-1. Download the excel
-2. Name it leaves.xlsx drop it into your one drive (check the format)
-3. Get the Shared link to the excel (save for later)
-4. Get your slack api webhook (save for later)
-5. Create github actions secerts (ONE_DRIVE_DOWNLOAD_URL and SLACK_WEBHOOK_URL)
+
+### 4. How to set up and update?
+1. Update the excel file on Onedrive
+2. ....
+3. Profit
 
 Github actions will run at 9am everyday. 
