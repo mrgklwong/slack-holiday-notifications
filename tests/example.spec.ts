@@ -16,8 +16,8 @@ test('has title', async ({ page }) => {
   await page.getByRole('button', { name: 'Verify' }).click();
   await page.getByRole('button', { name: 'Yes' }).click();
   await page.waitForLoadState('domcontentloaded');
-  await page.waitForTimeout(10000);
-  await page.locator('iframe[name="WacFrame_Excel_0"]').contentFrame().getByRole('button', { name: 'File' }).click();
+  await page.waitForTimeout(15000);
+  await page.locator('iframe[name="WacFrame_Excel_0"]').contentFrame().getByRole('button', { name: 'File', exact: true }).click();
   await page.locator('iframe[name="WacFrame_Excel_0"]').contentFrame().getByText('Create a Copy').click();
   const downloadPromise = page.waitForEvent('download');
   await page.locator('iframe[name="WacFrame_Excel_0"]').contentFrame().getByText('Download a Copy').click();
