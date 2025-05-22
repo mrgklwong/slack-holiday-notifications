@@ -34,6 +34,8 @@ jobs:
         run: mv "data/Leave Requests Report (1).xlsx" "leaves.xlsx"
       - name: Run report
         env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_URL_UK: ${{ secrets.SLACK_WEBHOOK_URL_UK }}
+          SLACK_WEBHOOK_URL_IN: ${{ secrets.SLACK_WEBHOOK_URL_IN }}
+          SLACK_WEBHOOK_URL_OZ: ${{ secrets.SLACK_WEBHOOK_URL_OZ }}
         run: |
           npm start --excelPath ./leaves.xlsx
