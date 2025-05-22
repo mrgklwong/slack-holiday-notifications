@@ -31,7 +31,7 @@ jobs:
           TEST_URL: ${{secrets.TEST_URL}}
           TEST_USERNAME: ${{secrets.TEST_USERNAME}}
       - name: Rename to leave.xlsx
-        run: mv "data/Report Leave requests.xlsx" "leaves.xlsx"
+        run: mv "data/Leave Requests Report (1).xlsx" "leaves.xlsx"
       - name: Run report
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
