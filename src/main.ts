@@ -2,29 +2,10 @@ import ExcelJS from 'exceljs';
 import axios from 'axios';
 import { format, isSameDay, isWithinInterval, parse } from 'date-fns';
 
-// Configuration for department-to-channel mapping (update as needed)
-const DEPARTMENT_CHANNEL_MAP = {
-    UK: '#garytesting',
-    India: '#garytesting',
-    OZ: '#garytesting'
-};
-
-// Common validation for channel mapping
-const validateChannelMapping = (): void => {
-    const missingChannels = Object.values(DEPARTMENT_CHANNEL_MAP).filter(channel => channel === '');
-    if (missingChannels.length > 0) {
-        throw new Error('Incomplete channel mapping configuration in DEPARTMENT_CHANNEL_MAP');
-    }
-};
-
 const EXCEL_FILE_PATH = process.argv.includes('--excelPath')
     ? process.argv[process.argv.indexOf('--excelPath') + 1]
     : 'leaves.xlsx';
 
-type SlackPayload = {
-    text: string;
-    channel?: string;
-};
 
 interface LeaveEntry {
     Employee: string;
@@ -32,25 +13,17 @@ interface LeaveEntry {
     FinishDate: Date;
     LeaveType: string;
     Status: string;
-    Department: string;
+    Office: string;
 }
 
-const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL!;
-
-// Custom parser with better error handling
+const SLACK_WEBHOOK_URL_UK = process.env.SLACK_WEBHOOK_URL_UK!;
+const SLACK_WEBHOOK_URL_OZ = process.env.SLACK_WEBHOOK_URL_OZ!;
+const SLACK_WEBHOOK_URL_IN = process.env.SLACK_WEBHOOK_URL_IN!;
+// Custom parser focusing on date portion only
 function parseJsDate(dateStr: string): Date {
-    const defaultDate = new Date();
-    let date = parse(dateStr, "MMM dd yyyy", defaultDate);
+    const dateParts = dateStr.split(' ').slice(1, 4); // ["May", "23", "2025"]
+    return parse(dateParts.join(' '), "MMM dd yyyy", new Date());
 
-    if (isNaN(date.getTime())) {
-        // Try alternative date formats if needed
-        date = parse(dateStr, "M/d/yyyy", new Date());
-        if (isNaN(date.getTime())) {
-            throw new Error(`Invalid date format: ${dateStr}`);
-        }
-    }
-
-    return date;
 }
 
 async function readExcel(): Promise<LeaveEntry[]> {
@@ -60,131 +33,128 @@ async function readExcel(): Promise<LeaveEntry[]> {
     const sheet = workbook.getWorksheet('VOGSY Data');
     if (!sheet) throw new Error('VOGSY Data sheet not found');
 
-    const headers = sheet.getRow(1).values as any[];
-    const employeeCol = headers.findIndex(val => val === 'Employee') + 1;
-    const startDateCol = headers.findIndex(val => val === 'Start date') + 1;
-    const finishDateCol = headers.findIndex(val => val === 'Finish date') + 1;
-    const leaveTypeCol = headers.findIndex(val => val === 'Description leave budget') + 1;
-    const statusCol = headers.findIndex(val => val === 'Status') + 1;
-    const companyDepCol = headers.findIndex(val => val === 'Company / department') + 1;
-
-    // Validate all required headers exist
-    if ([employeeCol, startDateCol, finishDateCol, leaveTypeCol, statusCol, companyDepCol].some(i => i === 0)) {
-        throw new Error('Could not find expected columns in Excel sheet');
-    }
-
-    const validateCellValue = (value: any): string => {
-        if (!value) return '';
-        return typeof value === 'string' ? value.trim() : String(value);
-    };
-
-    return sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+    const entries: LeaveEntry[] = [];
+    sheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
         if (rowNumber === 1) return;
 
-        // Extract and normalize company/department value
-        const rawdep = validateCellValue(row.getCell(companyDepCol).value);
-        const department = rawdep.split('/').pop()?.trim().toLowerCase() || '';
+        const rawStart = row.getCell(3).text;
+        const rawEnd = row.getCell(4).text;
 
-        // Extract and parse dates
-        const startCell = row.getCell(startDateCol);
-        const startDateStr = typeof startCell.text === 'string' ? startCell.text : '';
-        const startDateVal = startCell.value instanceof Date
-            ? startCell.value
-            : parseJsDate(startDateStr);
-
-        const finishCell = row.getCell(finishDateCol);
-        const finishDateStr = typeof finishCell.text === 'string' ? finishCell.text : '';
-        const finishDateVal = finishCell.value instanceof Date
-            ? finishCell.value
-            : parseJsDate(finishDateStr);
-
-        return {
-            Employee: validateCellValue(row.getCell(employeeCol).value),
-            StartDate: startDateVal,
-            FinishDate: finishDateVal,
-            LeaveType: validateCellValue(row.getCell(leaveTypeCol).value).toLowerCase(),
-            Status: validateCellValue(row.getCell(statusCol).value).toLowerCase(),
-            Department: department
-        };
+        entries.push({
+            Employee: row.getCell(1).text,
+            StartDate: parseJsDate(rawStart),
+            FinishDate: parseJsDate(rawEnd),
+            LeaveType: row.getCell(6).text,
+            Status: row.getCell(9).text.toLowerCase(),
+            Office: row.getCell(2).text.toLowerCase()
+        });
     });
-}
 
-async function getActiveLeaves(entries: LeaveEntry[]): Promise<LeaveEntry[]> {
-    const today = new Date();
-    return entries.filter(entry => {
-        return ['Annual Leave', 'Sick Leave'].includes(entry.LeaveType) &&
-            ['approved', 'submitted'].includes(entry.Status) &&
-            (isSameDay(today, entry.StartDate) ||
-                isWithinInterval(today, {
-                    start: entry.StartDate,
-                    end: entry.FinishDate
-                }));
-    });
-}
-
-function groupLeavesByChannel(entries: LeaveEntry[]): Record<string, LeaveEntry[]> {
-    validateChannelMapping();
-    const today = format(new Date(), 'dd-MM-yyyy');
-
-    return Object.entries(DEPARTMENT_CHANNEL_MAP).reduce((groups, [department, channel]) => {
-        const filtered = entries.filter(entry =>
-            entry.Department === department.toLowerCase()
-        );
-
-        if (filtered.length > 0) {
-            groups[channel] = filtered;
-        }
-        return groups;
-    }, {} as Record<string, LeaveEntry[]>);
-}
-
-async function sendSlackMessage(channel: string, leaves: LeaveEntry[]): Promise<void> {
-    const formattedLeaves = leaves.map(entry =>
-        `• *${entry.Employee}* - ${entry.LeaveType} ` +
-        `(${format(entry.StartDate, 'dd-MM-yyyy')} - ` +
-        `${format(entry.FinishDate, 'dd-MM-yyyy')})`
-    );
-
-    let message = `:palm_tree: *Daily Leave Report (${format(new Date(), 'dd-MM-yyyy')})* :palm_tree:\n`;
-
-    if (leaves.length === 0) {
-        message += 'No one is slacking today!';
-    } else {
-        message += `There are **${leaves.length}** leaves today in ${channel}:\n` + formattedLeaves.join('\n');
-    }
-
-    message += '\nStay sunny! :sun_with_face:';
-
-    try {
-        const payload: SlackPayload = {
-            text: message,
-            channel: channel
-        };
-
-        console.log(`Sending to Slack channel ${channel}:`, payload.text);
-        await axios.post(SLACK_WEBHOOK_URL, payload);
-    } catch (error) {
-        console.error(`Failed to send to Slack channel ${channel}:`, error.message);
-    }
+    return entries;
 }
 
 async function main() {
-    // Read and process leave data from Excel file
-    const excelEntries = await readExcel();
-    const relevantLeaves = await getActiveLeaves(excelEntries);
+    const entries = await readExcel();
 
-    // Group leaves by their department to targeted channels
-    const channelGroupedLeaves = groupLeavesByChannel(relevantLeaves);
+    // Format filtered entries for logging
+    const filteredEntries = entries.filter(e => e.Employee === 'Gary Wong');
+    console.log('Test Employee Entries:');
+    filteredEntries.forEach(entry => {
+        console.log({
+            Employee: entry.Employee,
+            StartDate: format(entry.StartDate, 'dd/MM/yyyy'),
+            FinishDate: format(entry.FinishDate, 'dd/MM/yyyy'),
+            LeaveType: entry.LeaveType,
+            Status: entry.Status,
+            Office: entry.Office
+        });
+    });
 
-    for (const [channel, leaves] of Object.entries(channelGroupedLeaves)) {
-        await sendSlackMessage(channel, leaves);
+    const today = new Date();
+    console.log(`Today's Date: ${today}`);
+
+    const relevantLeaves = entries.filter(entry => {
+        const isValidLeave = ['Annual Leave', 'Sick Leave'].includes(entry.LeaveType);
+        const isActiveStatus = ['approved', 'submitted'].includes(entry.Status);
+        return isActiveStatus &&
+            (isSameDay(today, entry.StartDate) ||
+                isWithinInterval(today, { start: entry.StartDate, end: entry.FinishDate }) ||
+                isSameDay(today, entry.FinishDate));
+    });
+
+    const UKLeaves = entries.filter(entry => {
+        const isValidLeave = ['Annual Leave', 'Sick Leave'].includes(entry.LeaveType);
+        const isActiveStatus = ['approved', 'submitted'].includes(entry.Status);
+        const isUK = ['clearroute uk ltd'].includes((entry.Office));
+        return isActiveStatus &&
+                isUK &&
+            (isSameDay(today, entry.StartDate) ||
+                isWithinInterval(today, { start: entry.StartDate, end: entry.FinishDate }) ||
+                isSameDay(today, entry.FinishDate));
+    });
+
+    const OZLeaves = entries.filter(entry => {
+        const isValidLeave = ['Annual Leave', 'Sick Leave'].includes(entry.LeaveType);
+        const isActiveStatus = ['approved', 'submitted'].includes(entry.Status);
+        const isUK = ['clearroute australia pty ltd'].includes((entry.Office));
+        return isActiveStatus &&
+            isUK &&
+            (isSameDay(today, entry.StartDate) ||
+                isWithinInterval(today, { start: entry.StartDate, end: entry.FinishDate }) ||
+                isSameDay(today, entry.FinishDate));
+    });
+
+    const indiaLeaves = entries.filter(entry => {
+        const isValidLeave = ['Annual Leave', 'Sick Leave'].includes(entry.LeaveType);
+        const isActiveStatus = ['approved', 'submitted'].includes(entry.Status);
+        const isUK = ['clearroute india'].includes((entry.Office));
+        return isActiveStatus &&
+            isUK &&
+            (isSameDay(today, entry.StartDate) ||
+                isWithinInterval(today, { start: entry.StartDate, end: entry.FinishDate }) ||
+                isSameDay(today, entry.FinishDate));
+    });
+
+    let slackMessage = `:palm_tree: *Daily Leave Report (${format(today, 'dd/MM/yyyy')})* :palm_tree:\n`;
+    if (UKLeaves.length === 0) {
+        slackMessage += 'No one is slacking today!';
+    } else {
+        UKLeaves.forEach(entry => {
+            slackMessage += `• *${entry.Employee}* - ${entry.LeaveType} ` +
+                `(${format(entry.StartDate, 'dd/MM/yyyy')} - ` +
+                `${format(entry.FinishDate, 'dd/MM/yyyy')})\n`;
+        });
     }
-}
+    slackMessage += 'Stay sunny! :sun_with_face:';
 
-// Ensure environment variables are set and start the process
-if (!SLACK_WEBHOOK_URL) {
-    console.error('SLACK_WEBHOOK_URL environment variable is missing');
-    process.exit(1);
+    console.log('Sending to Slack UK:', slackMessage);
+
+    await axios.post(SLACK_WEBHOOK_URL_UK, { text: slackMessage, channel: '#testing' });
+    slackMessage = `:palm_tree: *Daily Leave Report (${format(today, 'dd/MM/yyyy')})* :palm_tree:\n`;
+    if (indiaLeaves.length === 0) {
+        slackMessage += 'No one is slacking today!';
+    } else {
+        indiaLeaves.forEach(entry => {
+            slackMessage += `• *${entry.Employee}* - ${entry.LeaveType} ` +
+                `(${format(entry.StartDate, 'dd/MM/yyyy')} - ` +
+                `${format(entry.FinishDate, 'dd/MM/yyyy')})\n`;
+        });
+    }
+    slackMessage += 'Stay sunny! :sun_with_face:';
+    await axios.post(SLACK_WEBHOOK_URL_IN, { text: slackMessage, channel: '#testing' });
+
+    slackMessage = `:palm_tree: *Daily Leave Report (${format(today, 'dd/MM/yyyy')})* :palm_tree:\n`;
+    if (indiaLeaves.length === 0) {
+        slackMessage += 'No one is slacking today!';
+    } else {
+        OZLeaves.forEach(entry => {
+            slackMessage += `• *${entry.Employee}* - ${entry.LeaveType} ` +
+                `(${format(entry.StartDate, 'dd/MM/yyyy')} - ` +
+                `${format(entry.FinishDate, 'dd/MM/yyyy')})\n`;
+        });
+    }
+    slackMessage += 'Stay sunny! :sun_with_face:';
+    await axios.post(SLACK_WEBHOOK_URL_OZ, { text: slackMessage, channel: '#testing' });
 }
 
 main().catch(console.error);
