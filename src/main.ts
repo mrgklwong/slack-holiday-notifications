@@ -141,6 +141,7 @@ async function main() {
         });
     }
     slackMessage += 'Stay sunny! :sun_with_face:';
+    console.log('Sending to Slack IN:', slackMessage);
     await axios.post(SLACK_WEBHOOK_URL_IN, { text: slackMessage, channel: '#testing' });
 
     slackMessage = `:palm_tree: *Daily Leave Report (${format(today, 'dd/MM/yyyy')})* :palm_tree:\n`;
@@ -154,6 +155,7 @@ async function main() {
         });
     }
     slackMessage += 'Stay sunny! :sun_with_face:';
+    console.log('Sending to Slack OZ:', slackMessage);
     await axios.post(SLACK_WEBHOOK_URL_OZ, { text: slackMessage, channel: '#testing' });
 }
 
