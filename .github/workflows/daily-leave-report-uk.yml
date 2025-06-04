@@ -1,0 +1,39 @@
+name: Daily Leave Report
+
+on:
+  schedule:
+    - cron: '0 9 * * 1-5' # Mon-Fri at 9 AM UTC
+  workflow_dispatch:
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Run Playwright tests
+        run: npx playwright test
+        env:      # Pass GitHub secret to env
+          TEST_PASSWORD: ${{ secrets.TEST_PASSWORD }}  # Pass GitHub secret to env
+          TEST_TOKEN: ${{ secrets.TEST_TOKEN }}
+          TEST_URL: ${{secrets.TEST_URL}}
+          TEST_USERNAME: ${{secrets.TEST_USERNAME}}
+      - name: Rename to leave.xlsx
+        run: mv "data/Leave Requests Report (1).xlsx" "leaves.xlsx"
+      - name: Run report
+        env:
+          SLACK_WEBHOOK_URL_UK: ${{ secrets.SLACK_WEBHOOK_URL_UK }}
+        run: |
+          npm start --excelPath ./leaves.xlsx
