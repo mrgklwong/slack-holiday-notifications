@@ -16,8 +16,7 @@ interface LeaveEntry {
     Office: string;
 }
 
-const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL_UK!;
-
+const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL_IN!;
 // Custom parser focusing on date portion only
 function parseJsDate(dateStr: string): Date {
     const dateParts = dateStr.split(' ').slice(1, 4); // ["May", "23", "2025"]
@@ -115,21 +114,7 @@ async function main() {
     });
 
     let slackMessage = `:palm_tree: *Daily Leave Report (${format(today, 'dd/MM/yyyy')})* :palm_tree:\n`;
-    if (UKLeaves.length === 0) {
-        slackMessage += 'No one is slacking today!';
-    } else {
-        UKLeaves.forEach(entry => {
-            slackMessage += `• *${entry.Employee}* - ${entry.LeaveType} ` +
-                `(${format(entry.StartDate, 'dd/MM/yyyy')} - ` +
-                `${format(entry.FinishDate, 'dd/MM/yyyy')})\n`;
-        });
-    }
-    slackMessage += 'Stay sunny! :sun_with_face:';
 
-    console.log('Sending to Slack UK:', slackMessage);
-
-    await axios.post(SLACK_WEBHOOK_URL, { text: slackMessage, channel: '#testing' });
-    slackMessage = `:palm_tree: *Daily Leave Report (${format(today, 'dd/MM/yyyy')})* :palm_tree:\n`;
     if (indiaLeaves.length === 0) {
         slackMessage += 'No one is slacking today!';
     } else {
@@ -142,20 +127,7 @@ async function main() {
     slackMessage += 'Stay sunny! :sun_with_face:';
     console.log('Sending to Slack IN:', slackMessage);
     await axios.post(SLACK_WEBHOOK_URL, { text: slackMessage, channel: '#testing' });
-
-    slackMessage = `:palm_tree: *Daily Leave Report (${format(today, 'dd/MM/yyyy')})* :palm_tree:\n`;
-    if (OZLeaves.length === 0) {
-        slackMessage += 'No one is slacking today!';
-    } else {
-        OZLeaves.forEach(entry => {
-            slackMessage += `• *${entry.Employee}* - ${entry.LeaveType} ` +
-                `(${format(entry.StartDate, 'dd/MM/yyyy')} - ` +
-                `${format(entry.FinishDate, 'dd/MM/yyyy')})\n`;
-        });
-    }
-    slackMessage += 'Stay sunny! :sun_with_face:';
-    console.log('Sending to Slack OZ:', slackMessage);
-    await axios.post(SLACK_WEBHOOK_URL, { text: slackMessage, channel: '#testing' });
+    console.log('Sending to Slack UK:', slackMessage);
 }
 
 main().catch(console.error);

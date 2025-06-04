@@ -36,4 +36,4 @@ jobs:
         env:
           SLACK_WEBHOOK_URL_OZ: ${{ secrets.SLACK_WEBHOOK_URL_OZ }}
         run: |
-          npm start --excelPath ./leaves.xlsx
+          npm run sydney --excelPath ./leaves.xlsx

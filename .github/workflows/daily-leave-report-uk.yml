@@ -16,7 +16,7 @@ jobs:
 
 
       - name: Setup Node
-        uses: actions/setup-node@v3
+        uses:d actions/setup-node@v3
         with:
           node-version: 18
       - name: Install dependencies
@@ -36,4 +36,4 @@ jobs:
         env:
           SLACK_WEBHOOK_URL_UK: ${{ secrets.SLACK_WEBHOOK_URL_UK }}
         run: |
-          npm start --excelPath ./leaves.xlsx
+          npm run london --excelPath ./leaves.xlsx
