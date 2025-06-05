@@ -125,8 +125,9 @@ async function main() {
         });
     }
     slackMessage += 'Stay sunny! :sun_with_face:';
-
+    await axios.post(SLACK_WEBHOOK_URL, { text: slackMessage, channel: '#testing' });
     console.log('Sending to Slack UK:', slackMessage);
+
 }
 
 main().catch(console.error);
